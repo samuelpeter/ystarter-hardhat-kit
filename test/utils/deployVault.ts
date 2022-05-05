@@ -16,7 +16,11 @@ export const deployVault = async ({ gov, token, rewards, guardian, management }:
   const VaultAPIFactory = await ethers.getContractFactory(abi, bytecode, gov);
   const vault = (await VaultAPIFactory.deploy()) as IVault;
 
-  console.log(vault);
+  /**
+   * When the contstuctor is overloaded like in Vault.vy you need to pass the raw function selector to access the wanted function
+   * @link{https://github.com/ethers-io/ethers.js/issues/407}
+   *  */
+
   //@ts-ignore
   await vault["initialize(address,address,address,string,string,address,address)"](
     token.address,
@@ -27,7 +31,6 @@ export const deployVault = async ({ gov, token, rewards, guardian, management }:
     guardian.address,
     management.address
   );
-
 
   await vault.setDepositLimit(ethers.constants.MaxUint256);
 
