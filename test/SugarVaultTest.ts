@@ -1,4 +1,5 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { BaseStrategy, BaseStrategyInitializable, IERC20, IVault, SugarVault } from "typechain";
 import { deployStrategy } from "./utils/deployStrategy";
@@ -25,7 +26,9 @@ describe("Sugar vault Test", function () {
     [gov, user, whale, guardian, rewards, management, strategist, keeper] = await ethers.getSigners();
     token = await deployYfi();
     vault = await deployVault({ gov, token, rewards, guardian, management });
-    strategy = await deployStrategy();
+    strategy = await deployStrategy({ keeper });
+
+    await vault.addStrategy(strategy.address, BigNumber.from(10000), BigNumber.from(0), ethers.constants.MaxUint256, BigNumber.from(1000));
   });
 
   it("testSetupOk", async () => {
