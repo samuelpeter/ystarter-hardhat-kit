@@ -4,7 +4,8 @@ pragma solidity ^0.8.12;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {VaultAPI} from "@yearnvaults/contracts/BaseStrategy.sol";
+import {VaultAPI} from "./../lib/yearn-vaults/contracts/BaseStrategy.sol";
+
 import "./interfaces/IERC4626.sol";
 import "./interfaces/IVaultWrapper.sol";
 
