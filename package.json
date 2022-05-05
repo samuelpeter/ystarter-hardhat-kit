@@ -1,11 +1,10 @@
 {
-    "name": "typescript-eth-solidity-hardhat-template",
+    "name": "ystarter-hardhat-kit",
     "version": "1.0.0",
     "description": "",
     "scripts": {
         "compile": "hardhat compile",
         "test": "hardhat test",
-        "deploy": "hardhat deploy",
         "node": "hardhat node",
         "lint:fix": "prettier --write 'scripts/**/*.{js,ts}' 'test/**/*.{js,ts}' 'tasks/**/*.{js,ts}' && tslint --fix --config tslint.json --project tsconfig.json && solhint contracts/**/*.sol",
         "lint": "tslint --config tslint.json --project tsconfig.json && solhint contracts/**/*.sol",
@@ -18,7 +17,6 @@
         "LICENSE",
         "README.md"
     ],
-    "author": "Kristjan Kosic <kristjan@protokol.com>",
     "license": "MIT",
     "devDependencies": {
         "@nomiclabs/hardhat-ethers": "^2.0.5",
