@@ -62,23 +62,20 @@ describe("Sugar vault Test", function () {
 
     expect(shares).to.equal(await vaultWrapper.convertToShares(ammount));
     expect(await vaultWrapper.balanceOf(sugarVault.address)).to.equal(await vaultWrapper.convertToShares(ammount));
-
+    
     expect(await want.balanceOf(whale.address)).to.equal(0);
+  });
 
-    /*
-   
+  it("StopSharingYield", async () => {
+    const ammount = YFI(10);
+    await want.connect(whale).approve(sugarVault.address, ammount);
+    await sugarVault.connect(whale).startSharingYield(user.address, ammount);
 
-    // asserts
-    assertEq(sugar.tokenBalances(whale), _amount);
-    assertEq(
-        sugar.shareBalances(whale),
-        vaultWrapper.convertToShares(_amount)
-    );
-    assertEq(shares, vaultWrapper.convertToShares(_amount));
-    assertEq(
-        vaultWrapper.balanceOf(address(sugar)),
-        vaultWrapper.convertToShares(_amount)
-    );
-    assertEq(want.balanceOf(whale), 0); */
+    await sugarVault.connect(whale).stopSharingYield();
+
+    expect(await want.balanceOf(whale.address)).to.equal(ammount);
+    expect(await sugarVault.tokenBalances(whale.address)).to.equal(0);
+    expect(await sugarVault.shareBalances(whale.address)).to.equal(0);
+    expect(await vaultWrapper.balanceOf(sugarVault.address)).to.equal(0);
   });
 });
