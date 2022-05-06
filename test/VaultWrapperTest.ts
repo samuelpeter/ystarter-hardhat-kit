@@ -58,7 +58,7 @@ describe("Vault Wrapper Test", function () {
     expect((await vault.strategies(strategy.address)).activation.toNumber()).to.greaterThan(0);
   });
 
-  it.only("TestErc20Compatibility", async () => {
+  it("TestErc20Compatibility", async () => {
     const ammount = YFI(1);
 
     await want.connect(whale).approve(vaultWrapper.address, ammount);
@@ -76,6 +76,26 @@ describe("Vault Wrapper Test", function () {
     expect(await vaultWrapper.maxRedeem(user.address)).to.equal(shares);
     expect(await vault.balanceOf(vaultWrapper.address)).to.equal(shares);
     expect(await vaultWrapper.totalSupply()).to.equal(shares);
+  });
 
+  it.only("testDeposit", async () => {
+    // deal(address(want), user, _amount);
+    const ammount = YFI(1);
+
+    await want.connect(whale).approve(vaultWrapper.address, ammount);
+    await vaultWrapper.connect(whale).deposit(ammount, user.address);
+
+    const shares = await vault.balanceOf(vaultWrapper.address);
+
+    expect(await want.balanceOf(vault.address)).to.equal(ammount);
+    expect(await vaultWrapper.balanceOf(user.address)).to.equal(shares);
+    expect(await vaultWrapper.maxRedeem(user.address)).to.equal(shares);
+    expect(await vault.balanceOf(vaultWrapper.address)).to.equal(shares);
+    expect(await vaultWrapper.totalSupply()).to.equal(shares);
+    // assertRelApproxEq(want.balanceOf(address(vault)), _amount, DELTA);
+    // assertEq(vaultWrapper.balanceOf(user), _shares);
+    // assertEq(vaultWrapper.maxRedeem(user), _shares);
+    // assertEq(vault.balanceOf(address(vaultWrapper)), _shares);
+    // assertEq(vaultWrapper.totalSupply(), _shares);
   });
 });
