@@ -124,4 +124,35 @@ describe("Vault Wrapper Test", function () {
     expect(await vaultWrapper.balanceOf(user.address)).to.equal(0);
     expect(await vaultWrapper.balanceOf(user.address)).to.equal(0);
   });
+
+  it.only("testStrategyOperation", async () => {
+    const ammount = YFI(1);
+    await want.connect(gov).transfer(user.address, ammount);
+
+    const balanceBefore = await want.balanceOf(user.address);
+
+    await want.connect(user).approve(vaultWrapper.address, ammount);
+    await vaultWrapper.connect(user).deposit(ammount, user.address);
+
+    const shares = await vault.balanceOf(vaultWrapper.address);
+
+    expect(await want.balanceOf(vault.address)).to.equal(ammount);
+    expect(await vaultWrapper.balanceOf(user.address)).to.equal(shares);
+    expect(await vaultWrapper.maxRedeem(user.address)).to.equal(shares);
+
+    await network.provider.send("evm_increaseTime", [180]);
+
+    await strategy.connect(strategist).harvest();
+
+    expect(await strategy.estimatedTotalAssets()).to.equal(ammount);
+
+    const withdrawAmount = await vaultWrapper.maxWithdraw(user.address);
+    await vaultWrapper.connect(user).withdraw(withdrawAmount, user.address, user.address);
+
+    expect(await want.balanceOf(user.address)).to.equal(balanceBefore);
+    expect(await vaultWrapper.balanceOf(user.address)).to.equal(0);
+
+    // assertRelApproxEq(want.balanceOf(user), balanceBefore, DELTA);
+    // assertEq(vaultWrapper.balanceOf(user), 0);
+  });
 });
