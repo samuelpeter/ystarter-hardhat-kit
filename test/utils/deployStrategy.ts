@@ -5,11 +5,12 @@ import { BaseStrategy, BaseStrategyInitializable, IVault, MockStrategy } from "t
 interface DeployStrategyArgs {
   vault: IVault;
   keeper: SignerWithAddress;
+  strategist: SignerWithAddress;
 }
 
-export const deployStrategy = async ({ keeper, vault }: DeployStrategyArgs): Promise<BaseStrategyInitializable> => {
+export const deployStrategy = async ({ keeper, vault, strategist }: DeployStrategyArgs): Promise<BaseStrategyInitializable> => {
   const MockStrategyFactory = await ethers.getContractFactory("MockStrategy");
-  const strategy = (await MockStrategyFactory.deploy(vault.address)) as MockStrategy;
-  await strategy.setKeeper(keeper.address);
+  const strategy = (await MockStrategyFactory.connect(strategist).deploy(vault.address)) as MockStrategy;
+  await strategy.connect(strategist).setKeeper(keeper.address);
   return strategy;
 };
