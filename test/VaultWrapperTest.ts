@@ -4,6 +4,7 @@ import { assert } from "console";
 import exp from "constants";
 import { BigNumber } from "ethers";
 import { ethers, network } from "hardhat";
+import { wrap } from "module";
 import { BaseStrategy, BaseStrategyInitializable, IERC20, IERC4626, IVault, SugarVault, VaultWrapper } from "typechain";
 import { deployStrategy } from "./utils/deployStrategy";
 import { deploySugarVault } from "./utils/deploySugarVault";
@@ -125,7 +126,7 @@ describe("Vault Wrapper Test", function () {
     expect(await vaultWrapper.balanceOf(user.address)).to.equal(0);
   });
 
-  it.only("testStrategyOperation", async () => {
+  it("testStrategyOperation", async () => {
     const ammount = YFI(1);
     await want.connect(gov).transfer(user.address, ammount);
 
@@ -151,8 +152,54 @@ describe("Vault Wrapper Test", function () {
 
     expect(await want.balanceOf(user.address)).to.equal(balanceBefore);
     expect(await vaultWrapper.balanceOf(user.address)).to.equal(0);
+  });
 
-    // assertRelApproxEq(want.balanceOf(user), balanceBefore, DELTA);
-    // assertEq(vaultWrapper.balanceOf(user), 0);
+  it.only("testProfitableHarvest", async () => {
+    const ammount = YFI(1);
+    await want.connect(gov).transfer(user.address, ammount);
+
+    const balanceBefore = await want.balanceOf(user.address);
+
+    // deal(address(want), user, _amount);
+    // deal(address(want), address(this), _amount / 2);
+
+    // // Deposit to the vault
+    await want.connect(user).approve(vaultWrapper.address, ammount);
+    await vaultWrapper.connect(user).deposit(ammount, user.address);
+
+    const shares = await vault.balanceOf(vaultWrapper.address);
+
+    expect(await vaultWrapper.balanceOf(user.address)).to.equal(shares);
+    expect(await want.balanceOf(vault.address)).to.equal(ammount);
+
+    const beforePps = await vault.pricePerShare();
+    const wrapperPps = await (await vaultWrapper.convertToAssets(1)).mul(BigNumber.from(10).pow(await vault.decimals()));
+    console.log("beforePps", beforePps);
+    console.log("yTokenPps", wrapperPps);
+
+    expect(beforePps.toString()).to.equal(wrapperPps.toString());
+
+    await network.provider.send("evm_increaseTime", [1]);
+    // Harvest 1: Send funds through the strategy
+    await strategy.connect(strategist).harvest();
+    expect(await strategy.estimatedTotalAssets()).to.equal(ammount);
+
+    // Airdrop gains to the strategy
+    await want.connect(gov).transfer(strategy.address, YFI(0.05));
+    await network.provider.send("evm_increaseTime", [1]);
+    // Harvest 2: Realize profit
+    await strategy.connect(strategist).harvest();
+    await network.provider.send("evm_increaseTime", [6 * 3600]);
+
+    const profit = await want.balanceOf(vault.address);
+
+    expect((await want.balanceOf(strategy.address)).add(profit).gt(ammount)).to.be.true;
+
+    const afterPbs = await vault.pricePerShare();
+
+    console.log(beforePps);
+    console.log(afterPbs);
+
+    expect((await vault.pricePerShare()).gt(beforePps)).to.be.true;
   });
 });
