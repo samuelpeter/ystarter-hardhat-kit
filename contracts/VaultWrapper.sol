@@ -210,7 +210,7 @@ contract VaultWrapper is ERC20, IVaultWrapper, IERC4626 {
         return this.balanceOf(owner);
     }
 
-    function _deposit(
+     function _deposit(
         uint256 amount, // if `MAX_UINT256`, just deposit everything
         address receiver,
         address depositor
