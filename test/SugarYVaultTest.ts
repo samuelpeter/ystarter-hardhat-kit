@@ -63,7 +63,18 @@ describe("SugarYVaultTest ", function () {
 
     expect(await want.balanceOf(whale.address)).to.equal(0);
   });
+  it("StopSharingYield", async () => {
+    const ammount = YFI(10);
+    await want.connect(whale).approve(sugarYVault.address, ammount);
+    await sugarYVault.connect(whale).startSharingYield(user.address, ammount);
 
+    await sugarYVault.connect(whale).stopSharingYield();
+
+    expect(await want.balanceOf(whale.address)).to.equal(ammount);
+    expect(await sugarYVault.tokenBalances(whale.address)).to.equal(0);
+    expect(await sugarYVault.shareBalances(whale.address)).to.equal(0);
+    expect(await vault.balanceOf(sugarYVault.address)).to.equal(0);
+  });
   it("ClaimYield", async () => {
     // setup
     const ammount = YFI(10);
