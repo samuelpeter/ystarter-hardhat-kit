@@ -3,8 +3,9 @@ import { expect } from "chai";
 import { assert } from "console";
 import exp from "constants";
 import { BigNumber } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { BaseStrategy, BaseStrategyInitializable, IERC20, IERC4626, IVault, SugarVault, VaultWrapper } from "typechain";
+import { relApproxyEqual } from "./utils/assertApproxEq";
 import { deployStrategy } from "./utils/deployStrategy";
 import { deploySugarVault } from "./utils/deploySugarVault";
 import { deployVault } from "./utils/deployVault";
@@ -32,7 +33,7 @@ describe("Sugar vault Test", function () {
     [gov, user, whale, guardian, rewards, management, strategist, keeper] = await ethers.getSigners();
     want = await deployYfi();
     vault = await deployVault({ gov, token: want, rewards, guardian, management });
-    strategy = await deployStrategy({ vault, keeper });
+    strategy = await deployStrategy({ vault, keeper, strategist });
     vaultWrapper = await deployVaultWrapper(vault);
     sugarVault = await deploySugarVault(vaultWrapper);
 
@@ -62,7 +63,7 @@ describe("Sugar vault Test", function () {
 
     expect(shares).to.equal(await vaultWrapper.convertToShares(ammount));
     expect(await vaultWrapper.balanceOf(sugarVault.address)).to.equal(await vaultWrapper.convertToShares(ammount));
-    
+
     expect(await want.balanceOf(whale.address)).to.equal(0);
   });
 
@@ -77,5 +78,46 @@ describe("Sugar vault Test", function () {
     expect(await sugarVault.tokenBalances(whale.address)).to.equal(0);
     expect(await sugarVault.shareBalances(whale.address)).to.equal(0);
     expect(await vaultWrapper.balanceOf(sugarVault.address)).to.equal(0);
+  });
+
+  it("ClaimYield", async () => {
+    // setup
+    const ammount = YFI(10);
+
+    await want.connect(whale).approve(sugarVault.address, ammount);
+    await sugarVault.connect(whale).startSharingYield(user.address, ammount);
+    const initialShares = await vault.balanceOf(vaultWrapper.address);
+
+    // // Harvest 1: Send funds through the strategy
+    await network.provider.send("evm_mine");
+
+    await strategy.connect(strategist).harvest();
+
+    expect(await strategy.estimatedTotalAssets()).to.equal(ammount);
+
+    // // Airdrop gains to the strategy
+    await want.connect(gov).transfer(strategy.address, YFI(5));
+    await network.provider.send("evm_increaseTime", [1]);
+    await network.provider.send("evm_mine", []);
+    await strategy.connect(strategist).harvest();
+    await network.provider.send("evm_increaseTime", [6 * 3600]);
+    await network.provider.send("evm_mine", []);
+    await strategy.connect(strategist).harvest();
+
+    const claimable = await sugarVault.claimable(whale.address, user.address);
+    const usersBalanceBefore = await want.balanceOf(user.address);
+
+    await sugarVault.connect(user).claimYield(whale.address);
+    const usersBalanceAfter = await want.balanceOf(user.address);
+
+    await sugarVault.connect(whale).stopSharingYield();
+
+    expect(relApproxyEqual(claimable, usersBalanceAfter.sub(usersBalanceBefore), BigNumber.from(10 ** 2))).to.be.true;
+    expect(initialShares.gt(await sugarVault.shareBalances(whale.address))).to.be.true;
+
+    expect((await want.balanceOf(whale.address)).gte(ammount)).to.be.true;
+
+    const whalesAssets = await vaultWrapper.convertToAssets(await sugarVault.shareBalances(whale.address));
+    expect(whalesAssets.gte(await sugarVault.tokenBalances(whale.address))).to.be.true;
   });
 });
