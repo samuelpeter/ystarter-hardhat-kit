@@ -5,7 +5,7 @@ import exp from "constants";
 import { BigNumber } from "ethers";
 import { ethers, network } from "hardhat";
 import { BaseStrategy, BaseStrategyInitializable, IERC20, IERC4626, IVault, SugarVault, VaultWrapper } from "typechain";
-import { relApproxyEqual } from "./utils/assertApproxEq";
+import { relApproxyEqual } from "./utils/helper/assertApproxEq";
 import { deployStrategy } from "./utils/deployStrategy";
 import { deploySugarVault } from "./utils/deploySugarVault";
 import { deployVault } from "./utils/deployVault";
