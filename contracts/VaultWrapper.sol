@@ -16,6 +16,8 @@ contract VaultWrapper is ERC20, IVaultWrapper, IERC4626 {
     address public immutable token;
     uint256 public immutable _decimals;
 
+    error SenderAllowanceTooLow();
+
     constructor(VaultAPI _vault)
         ERC20(
             string(abi.encodePacked(_vault.name(), "4646adapter")),
@@ -74,23 +76,28 @@ contract VaultWrapper is ERC20, IVaultWrapper, IERC4626 {
         emit Deposit(msg.sender, receiver, assets, shares);
     }
 
-    // TODO: add allowance check to use owner argument
     function withdraw(
         uint256 assets,
         address receiver,
         address owner
     ) public override returns (uint256 shares) {
+        if (owner != msg.sender) {
+            uint256 maxBurntShares = previewWithdraw(assets);
+            if (allowance(owner, msg.sender) < maxBurntShares) {
+                revert SenderAllowanceTooLow();
+            }
+        }
+
         (uint256 _withdrawn, uint256 _burntShares) = _withdraw(
             assets,
             receiver,
-            msg.sender
+            owner
         );
 
         emit Withdraw(msg.sender, receiver, owner, _withdrawn, _burntShares);
         return _burntShares;
     }
 
-    // TODO: add allowance check to use owner argument
     function redeem(
         uint256 shares,
         address receiver,
@@ -98,10 +105,16 @@ contract VaultWrapper is ERC20, IVaultWrapper, IERC4626 {
     ) public override returns (uint256 assets) {
         require((assets = previewRedeem(shares)) != 0, "ZERO_ASSETS");
 
+        if (owner != msg.sender) {
+            if (allowance(owner, msg.sender) < shares) {
+                revert SenderAllowanceTooLow();
+            }
+        }
+
         (uint256 _withdrawn, uint256 _burntShares) = _withdraw(
             assets,
             receiver,
-            msg.sender
+            owner
         );
 
         emit Withdraw(msg.sender, receiver, owner, _withdrawn, _burntShares);
@@ -258,14 +271,14 @@ contract VaultWrapper is ERC20, IVaultWrapper, IERC4626 {
     function _withdraw(
         uint256 amount, // if `MAX_UINT256`, just withdraw everything
         address receiver,
-        address sender
+        address owner
     ) internal returns (uint256 withdrawn, uint256 burntShares) {
         VaultAPI _vault = yVault;
 
         // Start with the total shares that `sender` has
         // Limit by maximum withdrawal size from each vault
         uint256 availableShares = Math.min(
-            this.balanceOf(sender),
+            this.balanceOf(owner),
             _vault.maxAvailableShares()
         );
 
@@ -286,10 +299,10 @@ contract VaultWrapper is ERC20, IVaultWrapper, IERC4626 {
         uint256 unusedShares = estimatedMaxShares - burntShares;
 
         // afterWithdraw custom logic
-        _burn(sender, estimatedMaxShares);
+        _burn(owner, estimatedMaxShares);
 
         // return unusedShares to sender
         if (unusedShares > 0)
-            SafeERC20.safeTransfer(_vault, sender, unusedShares);
+            SafeERC20.safeTransfer(_vault, owner, unusedShares);
     }
 }
